@@ -30,23 +30,28 @@ client.on("ready", async () => {
 });
 
 client.on("messageCreate", async (message) => {
-  if (message.content.substring(0, INVOKE_TRIGGER.length) === INVOKE_TRIGGER) {
+  console.log(message.content)
+  try {
+    if (message.content.substring(0, INVOKE_TRIGGER.length) === INVOKE_TRIGGER) {
 
-    const prompt = message.content.substring(INVOKE_TRIGGER.length, message.content.length);
+      const prompt = message.content.substring(INVOKE_TRIGGER.length, message.content.length);
 
-    if (prompt.length === 0) {
-      return
+      if (prompt.length === 0) {
+        return
+      }
+
+      await message.channel.sendTyping();
+
+      // send a message and wait for the response
+      const response = await api.sendMessage(
+        prompt
+      )
+
+      await message.channel.send(response);
+
     }
-
-    await message.channel.sendTyping();
-
-    // send a message and wait for the response
-    const response = await api.sendMessage(
-      prompt
-    )
-
-    message.channel.send(response); //reply if message has "!" as first character
-
+  } catch (err) {
+    console.error(err);
   }
 });
 

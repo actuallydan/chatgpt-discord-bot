@@ -12,6 +12,17 @@ if (!process.env.DISCORD_BOT_TOKEN || !process.env.OPENAI_TOKEN) {
 
 const api = new ChatGPTAPI({ sessionToken: process.env.OPENAI_TOKEN || "" })
 
+function splitString(str) {
+  let chunks = [];
+  const maxLength = 2000;
+
+  for (let i = 0; i < str.length / maxLength; i++) {
+    chunks.push(str.substring(i * maxLength, i * maxLength + maxLength));
+  }
+
+  return chunks
+}
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -44,10 +55,19 @@ client.on("messageCreate", async (message) => {
 
       // send a message and wait for the response
       const response = await api.sendMessage(
-        prompt
+        prompt, { onProgress: () => message.channel.sendTyping() }
       )
 
-      await message.channel.send(response);
+      const chunks = splitString(response);
+
+      const starterPromise = Promise.resolve(null);
+      await chunks.reduce(
+        async (p, chunk) => {
+          message.channel.sendTyping()
+          return p.then(() => message.channel.send(chunk))
+        },
+        starterPromise
+      );
 
     }
   } catch (err) {

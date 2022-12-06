@@ -29,7 +29,7 @@ const redis = createClient({
   url: process.env.REDIS_URI
 });
 
-redis.on("error", err => console.error("Redit client error: ", error))
+redis.on("error", err => console.error("Redis client error: ", err))
 
 const api = new ChatGPTAPI({ sessionToken: process.env.OPENAI_TOKEN || "" })
 

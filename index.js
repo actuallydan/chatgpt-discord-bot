@@ -1,14 +1,35 @@
-import { ChatGPTAPI } from 'chatgpt';
+import { ChatGPTAPI } from '@actuallydan/chatgpt';
 import dotenv from 'dotenv';
 import { Client, GatewayIntentBits } from 'discord.js';
+import { createClient } from 'redis';
 
 dotenv.config();
+
+async function getConversationFromChannelId(channelId) {
+  const conversation = await redis.get(channelId);
+
+  if (!conversation) {
+    return null
+  }
+
+  return JSON.parse(conversation)
+}
+
+async function setConversationForChannelId({ channelId, conversationId, parentMessageId }) {
+  await redis.set(channelId, JSON.stringify({ conversationId, parentMessageId }))
+}
 
 const INVOKE_TRIGGER = '??';
 
 if (!process.env.DISCORD_BOT_TOKEN || !process.env.OPENAI_TOKEN) {
   throw new Error('No bot token found!');
 }
+
+const redis = createClient({
+  url: process.env.REDIS_URI
+});
+
+redis.on("error", err => console.error("Redit client error: ", error))
 
 const api = new ChatGPTAPI({ sessionToken: process.env.OPENAI_TOKEN || "" })
 
@@ -33,6 +54,8 @@ const client = new Client({
 
 client.on("ready", async () => {
 
+  await redis.connect();
+
   // ensure the API is properly authenticated (optional)
   await api.ensureAuth()
 
@@ -53,10 +76,20 @@ client.on("messageCreate", async (message) => {
 
       await message.channel.sendTyping();
 
+      const conversationStore = await getConversationFromChannelId(message.channel.id);
+      console.log({ conversationStore })
+      let conversation = !conversationStore ? api.getConversation() : api.getConversation({ ...conversationStore })
+
       // send a message and wait for the response
-      const response = await api.sendMessage(
+      const response = await conversation.sendMessage(
         prompt
       )
+
+      await setConversationForChannelId({
+        channelId: message.channel.id,
+        conversationId: conversation.conversationId,
+        parentMessageId: conversation.parentMessageId
+      })
 
       const chunks = splitString(response);
 

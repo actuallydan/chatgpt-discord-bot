@@ -55,7 +55,7 @@ client.on("messageCreate", async (message) => {
 
       // send a message and wait for the response
       const response = await api.sendMessage(
-        prompt, { onProgress: () => message.channel.sendTyping() }
+        prompt
       )
 
       const chunks = splitString(response);
@@ -63,7 +63,6 @@ client.on("messageCreate", async (message) => {
       const starterPromise = Promise.resolve(null);
       await chunks.reduce(
         async (p, chunk) => {
-          message.channel.sendTyping()
           return p.then(() => message.channel.send(chunk))
         },
         starterPromise

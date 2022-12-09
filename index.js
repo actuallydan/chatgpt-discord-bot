@@ -64,17 +64,18 @@ client.on("ready", async () => {
 });
 
 client.on("messageCreate", async (message) => {
-  console.log(message.content)
+  
   try {
     if (message.content.substring(0, INVOKE_TRIGGER.length) === INVOKE_TRIGGER) {
 
+      console.log(message.content)
       const prompt = message.content.substring(INVOKE_TRIGGER.length, message.content.length);
 
       if (prompt.length === 0) {
         return
       }
 
-      await message.channel.sendTyping();
+      await Promise.all([api.ensureAuth(), message.channel.sendTyping()]);
 
       const conversationStore = await getConversationFromChannelId(message.channel.id);
       console.log({ conversationStore })

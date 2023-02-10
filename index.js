@@ -1,9 +1,26 @@
-import { ChatGPTAPI } from '@actuallydan/chatgpt';
+import { ChatGPTAPI } from 'chatgpt';
+
 import dotenv from 'dotenv';
 import { Client, GatewayIntentBits } from 'discord.js';
 import { createClient } from 'redis';
 
 dotenv.config();
+
+const INVOKE_TRIGGER = '??';
+
+if (!process.env.DISCORD_BOT_TOKEN || !process.env.OPENAI_TOKEN) {
+  throw new Error('No bot token found!');
+}
+
+const redis = createClient({
+  url: process.env.REDIS_URI
+});
+
+redis.on("error", err => console.error("Redis client error: ", err))
+
+const api = new ChatGPTAPI({
+  apiKey: process.env.OPENAI_TOKEN
+});
 
 async function getConversationFromChannelId(channelId) {
   const conversation = await redis.get(channelId);
@@ -18,21 +35,6 @@ async function getConversationFromChannelId(channelId) {
 async function setConversationForChannelId({ channelId, conversationId, parentMessageId }) {
   await redis.set(channelId, JSON.stringify({ conversationId, parentMessageId }))
 }
-
-const INVOKE_TRIGGER = '??';
-
-if (!process.env.DISCORD_BOT_TOKEN || !process.env.OPENAI_TOKEN) {
-  throw new Error('No bot token found!');
-}
-
-const redis = createClient({
-  url: process.env.REDIS_URI
-});
-
-redis.on("error", err => console.error("Redis client error: ", err))
-
-const api = new ChatGPTAPI({ sessionToken: process.env.OPENAI_TOKEN || "" })
-
 function splitString(str) {
   let chunks = [];
   const maxLength = 2000;
@@ -53,18 +55,13 @@ const client = new Client({
 });
 
 client.on("ready", async () => {
-
   await redis.connect();
-
-  // ensure the API is properly authenticated (optional)
-  await api.ensureAuth()
-
-  console.log("The bot is online"); //message when bot is online
-
+  console.log("The bot is online");
 });
 
+
 client.on("messageCreate", async (message) => {
-  
+
   try {
     if (message.content.substring(0, INVOKE_TRIGGER.length) === INVOKE_TRIGGER) {
 
@@ -75,24 +72,34 @@ client.on("messageCreate", async (message) => {
         return
       }
 
-      await Promise.all([api.ensureAuth(), message.channel.sendTyping()]);
+      await message.channel.sendTyping();
 
       const conversationStore = await getConversationFromChannelId(message.channel.id);
       console.log({ conversationStore })
-      let conversation = !conversationStore ? api.getConversation() : api.getConversation({ ...conversationStore })
 
-      // send a message and wait for the response
-      const response = await conversation.sendMessage(
-        prompt
-      )
+      let res = null;
+
+      // this is where the magic happens
+      // call to OpenAI API with either a new conversation or an existing one
+
+      if (conversationStore) {
+        res = await api.sendMessage(prompt, {
+          conversationId: conversationStore.conversationId,
+          parentMessageId: conversationStore.parentMessageId
+        });
+      } else {
+        res = await api.sendMessage(prompt)
+        console.log(res)
+      }
+
 
       await setConversationForChannelId({
         channelId: message.channel.id,
-        conversationId: conversation.conversationId,
-        parentMessageId: conversation.parentMessageId
+        conversationId: res.conversationId,
+        parentMessageId: res.parentMessageId
       })
 
-      const chunks = splitString(response);
+      const chunks = splitString(res.text);
 
       const starterPromise = Promise.resolve(null);
       await chunks.reduce(

@@ -33,6 +33,10 @@ async function getConversationFromChannelId(channelId) {
   return JSON.parse(conversation)
 }
 
+function log(args = "") {
+  console.log(`${new Date().toISOString()} | ${args}`)
+}
+
 async function setConversationForChannelId({ channelId, conversationId, parentMessageId }) {
   await redis.set(channelId, JSON.stringify({ conversationId, parentMessageId }))
 }
@@ -57,7 +61,7 @@ const client = new Client({
 
 client.on("ready", async () => {
   await redis.connect();
-  console.log("The bot is online");
+  log("The bot is online");
 });
 
 
@@ -66,7 +70,7 @@ client.on("messageCreate", async (message) => {
   try {
     if (message.content.substring(0, INVOKE_TRIGGER.length) === INVOKE_TRIGGER) {
 
-      console.log(message.content)
+      log(`INPUT: ${message.content}`)
       const prompt = message.content.substring(INVOKE_TRIGGER.length, message.content.length);
 
       if (prompt.length === 0) {
@@ -76,7 +80,6 @@ client.on("messageCreate", async (message) => {
       await message.channel.sendTyping();
 
       const conversationStore = await getConversationFromChannelId(message.channel.id);
-      console.log({ conversationStore })
 
       let res = null;
 
@@ -93,10 +96,13 @@ client.on("messageCreate", async (message) => {
         res = await api.sendMessage(prompt, {
           promptPrefix: promptPrefix
         })
-        console.log(res)
       }
 
-
+      // console.log(res)
+      log(`OUTPUT: ${res.text}`)
+      log(`conversationId: ${res.conversationId}`)
+      log(`parentMessageId: ${res.parentMessageId}`)
+      log()
       await setConversationForChannelId({
         channelId: message.channel.id,
         conversationId: res.conversationId,

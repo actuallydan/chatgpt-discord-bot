@@ -8,6 +8,7 @@ dotenv.config();
 
 const INVOKE_TRIGGER = '??';
 const promptPrefix = `You are SkyNot, a helpful and friendly AI assistant. You respond to messages in a friendly manner. When asked to provide a response, you are thorough and do not include previous responses unless asked.`;
+const RESET_TRIGGER = 'CONVERSATION_RESET';
 
 if (!process.env.DISCORD_BOT_TOKEN || !process.env.OPENAI_TOKEN) {
   throw new Error('No bot token found!');
@@ -31,6 +32,9 @@ async function getConversationFromChannelId(channelId) {
   }
 
   return JSON.parse(conversation)
+}
+async function clearConversationForChannelId(channelId) {
+  await redis.del(channelId)
 }
 
 function log(args = "") {
@@ -74,7 +78,13 @@ client.on("messageCreate", async (message) => {
       const prompt = message.content.substring(INVOKE_TRIGGER.length, message.content.length);
 
       if (prompt.length === 0) {
-        return
+        return;
+      }
+
+      if(message.content.includes(RESET_TRIGGER)){
+        await clearConversationForChannelId(message.channel.id);
+        log(`Conversation reset for channel ${message.channel.id}!`)
+        return;
       }
 
       await message.channel.sendTyping();
@@ -103,7 +113,7 @@ client.on("messageCreate", async (message) => {
       log(`conversationId: ${res.conversationId}`)
       log(`parentMessageId: ${res.parentMessageId}`)
       log();
-      
+
       await setConversationForChannelId({
         channelId: message.channel.id,
         conversationId: res.conversationId,

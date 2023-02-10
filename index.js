@@ -7,7 +7,7 @@ import { createClient } from 'redis';
 dotenv.config();
 
 const INVOKE_TRIGGER = '??';
-const promptPrefix = `You are SkyNot, a helpful and friendly AI assistant. You answer questions and respond to messages in a friendly manner. When asked to provide a response, you are thorough and verbose.Current date: ${new Date().toISOString()}\n\n`;
+const promptPrefix = `You are SkyNot, a helpful and friendly AI assistant. You respond to messages in a friendly manner. When asked to provide a response, you are thorough and do not include previous responses unless asked.`;
 
 if (!process.env.DISCORD_BOT_TOKEN || !process.env.OPENAI_TOKEN) {
   throw new Error('No bot token found!');
@@ -102,7 +102,8 @@ client.on("messageCreate", async (message) => {
       log(`OUTPUT: ${res.text}`)
       log(`conversationId: ${res.conversationId}`)
       log(`parentMessageId: ${res.parentMessageId}`)
-      log()
+      log();
+      
       await setConversationForChannelId({
         channelId: message.channel.id,
         conversationId: res.conversationId,

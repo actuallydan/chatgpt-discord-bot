@@ -91,16 +91,16 @@ client.on("messageCreate", async (message) => {
 
       await message.channel.sendTyping();
 
-      const conversationStore = await getConversationFromChannelId(message.channel.id);
+      const parentMessageId = await getConversationFromChannelId(message.channel.id);
 
       let res = null;
 
       // this is where the magic happens
       // call to OpenAI API with either a new conversation or an existing one
 
-      if (conversationStore) {
+      if (parentMessageId) {
         res = await api.sendMessage(prompt, {
-          parentMessageId: conversationStore.parentMessageId,
+          parentMessageId: parentMessageId,
           systemMessage: promptPrefix
         });
       } else {

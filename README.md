@@ -2,7 +2,13 @@
 
 I wrote this before it was cool (before you could pay for it), but now it's not that interesting.
 
-Figure 1. Havok you can wreak on yourself with ChatGPT
+Figure 1. The bot in action
+
+![image](image2.png)
+
+
+Figure 2. Havok you can wreak on yourself with ChatGPT
+
 ![image](image.jpg)
 
 (Also the entire aggravating process of setting up a Discord app which I can't be bothered document)

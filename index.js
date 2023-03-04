@@ -1,4 +1,4 @@
-import { ChatGPTAPI } from 'chatgpt';
+import { ChatGPTAPI } from 'chatgpt'
 
 import dotenv from 'dotenv';
 import { Client, GatewayIntentBits } from 'discord.js';
@@ -31,8 +31,9 @@ async function getConversationFromChannelId(channelId) {
     return null
   }
 
-  return JSON.parse(conversation)
+  return conversation;
 }
+
 async function clearConversationForChannelId(channelId) {
   await redis.del(channelId)
 }
@@ -41,9 +42,10 @@ function log(args = "") {
   console.log(`${new Date().toISOString()} | ${args}`)
 }
 
-async function setConversationForChannelId({ channelId, conversationId, parentMessageId }) {
-  await redis.set(channelId, JSON.stringify({ conversationId, parentMessageId }))
+async function setConversationForChannelId({ channelId, parentMessageId }) {
+  await redis.set(channelId, parentMessageId)
 }
+
 function splitString(str) {
   let chunks = [];
   const maxLength = 2000;
@@ -98,25 +100,22 @@ client.on("messageCreate", async (message) => {
 
       if (conversationStore) {
         res = await api.sendMessage(prompt, {
-          conversationId: conversationStore.conversationId,
           parentMessageId: conversationStore.parentMessageId,
-          promptPrefix: promptPrefix
+          systemMessage: promptPrefix
         });
       } else {
         res = await api.sendMessage(prompt, {
-          promptPrefix: promptPrefix
+          systemMessage: promptPrefix
         })
       }
 
       // console.log(res)
       log(`OUTPUT: ${res.text}`)
-      log(`conversationId: ${res.conversationId}`)
       log(`parentMessageId: ${res.parentMessageId}`)
       log();
 
       await setConversationForChannelId({
         channelId: message.channel.id,
-        conversationId: res.conversationId,
         parentMessageId: res.parentMessageId
       })
 
